@@ -1,0 +1,22 @@
+[package]
+name = "kernel"
+version = "0.1.0"
+edition = "2024"
+
+[profile.dev]
+opt-level = "z"
+panic = "abort"
+lto = true
+codegen-units = 1
+overflow-checks = false
+
+[profile.release]
+opt-level = "z"
+panic = "abort"
+lto = true
+codegen-units = 1
+overflow-checks = false
+ 
+[dependencies]
+log = "0.4.29"
+uefi = { version = "0.37.0", features = ["panic_handler", "logger"] }

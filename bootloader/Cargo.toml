@@ -1,0 +1,15 @@
+[package]
+name = "bootloader"
+version = "0.1.0"
+edition = "2024"
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"
+ 
+[dependencies]
+goblin = { version = "0.10.5", features = ["elf64"], default-features = false }
+log = "0.4.29"
+uefi = { version = "0.37.0", features = ["panic_handler", "logger"] }

@@ -20,3 +20,5 @@ overflow-checks = false
 [dependencies]
 log = "0.4.29"
 uefi = { version = "0.37.0", features = ["panic_handler", "logger"] }
+com = { path = "../libs/com" }
+uefi-bootinfo = { path = "../libs/uefi-bootinfo" }

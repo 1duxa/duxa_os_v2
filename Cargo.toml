@@ -1,0 +1,26 @@
+[workspace]
+members = [
+    "kernel",
+    "bootloader",
+    "libs/com",
+    "libs/uefi-bootinfo",
+]
+resolver = "2"
+
+[profile.dev]
+opt-level = "z"
+panic = "abort"
+lto = true
+codegen-units = 1
+overflow-checks = false
+
+[profile.release]
+opt-level = "z"
+panic = "abort"
+lto = true
+codegen-units = 1
+overflow-checks = false
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"

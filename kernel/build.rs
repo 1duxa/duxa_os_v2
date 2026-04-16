@@ -1,4 +1,16 @@
+use std::env;
+use std::path::Path;
+
 fn main() {
-    println!("cargo:rustc-link-arg=-Tkernel.ld");
-    println!("cargo:rerun-if-changed=kernel.ld");
+    let manifest_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
+    let linker_script = Path::new(&manifest_dir).join("kernel.ld");
+
+    println!("cargo:rustc-link-arg=-T{}", linker_script.display());
+    println!("cargo:rerun-if-changed={}", linker_script.display());
+
+    println!(
+        "cargo:warning=Using linker script: {}",
+        linker_script.display()
+    );
 }
+

@@ -79,6 +79,7 @@ macro_rules! serial_println {
 }
 
 #[doc(hidden)]
+#[allow(dead_code)]
 fn serial_print_inner(args: fmt::Arguments) {
     use fmt::Write;
     let _ = serial().write_fmt(args);

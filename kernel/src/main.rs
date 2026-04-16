@@ -3,13 +3,8 @@
 
 use com::{SerialPort, print_hex, print_num, serial_print, serial_println};
 use uefi::boot::{MemoryDescriptor, MemoryType};
+use uefi_bootinfo::BootInfo;
 
-#[repr(C)]
-pub struct BootInfo {
-    pub mmap_ptr: u64,
-    pub mmap_len: usize,
-    pub mmap_desc_size: usize,
-}
 #[unsafe(no_mangle)]
 pub extern "C" fn kernel_main(boot_info: *const BootInfo) -> ! {
     SerialPort::init();

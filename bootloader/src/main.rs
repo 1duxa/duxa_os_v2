@@ -103,8 +103,10 @@ fn main() -> Status {
     .expect("Failed to allocate kernel memory");
 
     for i in 0..phnum {
-        let phdr =
-            unsafe { &*(kernel_buf.as_ptr().add(phoff + i * phentsize) as *const Elf64Phdr) };
+        let phdr = unsafe { 
+            &*(kernel_buf.as_ptr().add(phoff + i * phentsize) as *const Elf64Phdr) 
+        };
+
         if phdr.ptype != PT_LOAD || phdr.memsz == 0 {
             continue;
         }
@@ -138,20 +140,16 @@ fn main() -> Status {
     let memory_map = unsafe { boot::exit_boot_services(Some(MemoryType::LOADER_DATA)) };
 
     let stack_top = stack_ptr.as_ptr() as u64 + (stack_pages as u64) * 4096;
-    let boot_info = BootInfo {
+    let mut boot_info = BootInfo {
         mmap_ptr: memory_map.get(0).unwrap() as *const _ as u64,
         mmap_len: memory_map.len(),
         mmap_desc_size: memory_map.meta().desc_size,
         stack_top,
-        kernel_high_p4_addr: 0
+        kernel_p4_addr: 0
     };
 
     let entry_point = ehdr.entry;
 
-    info!(
-        "Jumping to kernel at {:#x} with stack at {:#x}",
-        entry_point, stack_top
-    );
     unsafe {
         for i in 0..512 {
             P2.0[i] = (i as u64 * 2 * MiB) | PRESENT | WRITABLE | HUGE;
@@ -165,14 +163,8 @@ fn main() -> Status {
         P4.0[0]   = &raw const P3 as u64 | PRESENT | WRITABLE;
         P4.0[511] = &raw const P3_HIGH as u64 | PRESENT | WRITABLE;
     }
-
-    info!("P4      at {:#x}", &raw const P4 as u64);
-info!("P3      at {:#x}", &raw const P3 as u64);
-info!("P3_HIGH at {:#x}", &raw const P3_HIGH as u64);
-info!("P2      at {:#x}", &raw const P2 as u64);
+    boot_info.kernel_p4_addr = &raw const P4 as u64;
     load_cr3(&raw const P4);
-
-
 
     unsafe {
         core::arch::asm!(

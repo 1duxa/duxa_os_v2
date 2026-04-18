@@ -26,4 +26,6 @@ qemu-system-x86_64 \
   -drive if=pflash,format=raw,file=$ROOT_DIR/OVMF_VARS.fd \
   -drive if=none,id=esp,format=raw,file=esp.img \
   -device ide-hd,drive=esp \
+  -no-reboot -no-shutdown \
+  -d int,cpu_reset \
   -nographic

@@ -1,13 +1,53 @@
 #![no_main]
 #![no_std]
 
+use core::arch::asm;
+
 use com::{SerialPort, print_hex, print_num, serial_print, serial_println};
+use page_table::PageTable;
 use uefi::boot::{MemoryDescriptor, MemoryType};
 use uefi_bootinfo::BootInfo;
 
 unsafe extern "C" {
     static _kernel_start: u8;
     static _kernel_end: u8;
+}
+
+const PRESENT: u64 = 1 << 0;
+const WRITABLE: u64 = 1 << 1;
+const HUGE: u64 = 1 << 7;
+
+static mut P1: PageTable = PageTable([0; 512]);
+static mut P2: PageTable = PageTable([0; 512]);
+static mut P3: PageTable = PageTable([0; 512]);
+static mut P4: PageTable = PageTable([0; 512]);
+
+fn load_cr3(p4: *const PageTable) {
+    let phys = p4 as u64;
+    unsafe {
+        asm!(
+            "mov cr3, {}",
+            in(reg) phys,
+            options(nostack, preserves_flags)
+        );
+    }
+}
+fn enable_pae() {
+    let mut cr4: u64;
+    unsafe {
+        asm!("mov {}, cr4", out(reg) cr4);
+        cr4 |= 1 << 5; // PAE
+        asm!("mov cr4, {}", in(reg) cr4);
+    }
+}
+
+fn enable_paging() {
+    let mut cr0: u64;
+    unsafe {
+        asm!("mov {}, cr0", out(reg) cr0);
+        cr0 |= 1 << 31; // PG bit
+        asm!("mov cr0, {}", in(reg) cr0);
+    }
 }
 
 #[unsafe(no_mangle)]
@@ -18,10 +58,29 @@ pub extern "C" fn kernel_main(boot_info: *const BootInfo) -> ! {
     let info = unsafe { &*boot_info };
     let kernel_start = unsafe { &_kernel_start as *const _ as u64 };
     let kernel_end = unsafe { &_kernel_end as *const _ as u64 };
+    unsafe {
+        for i in 0..512 {
+            P2.0[i] = (i as u64 * 0x200000) | PRESENT | WRITABLE | HUGE;
+        }
+    }
+
+    unsafe {
+        P3.0[0] = &raw const P2 as u64 | PRESENT | WRITABLE;
+    }
+
+    unsafe {
+        P4.0[0] = &raw const P3 as u64 | PRESENT | WRITABLE;
+    }
+    enable_pae();
+    load_cr3(&raw const P4);
+    enable_paging();
     serial_println!("Kernel starts at: ");
     print_hex(kernel_start);
     serial_println!("Kernel ends at: ");
     print_hex(kernel_end);
+
+    serial_println!("Kernel stack top at: ");
+    print_hex(info.stack_top);
 
     serial_println!("Memory map entries: ");
     print_num(info.mmap_len);
@@ -44,7 +103,11 @@ pub extern "C" fn kernel_main(boot_info: *const BootInfo) -> ! {
 
         ptr = unsafe { (ptr as *const u8).add(info.mmap_desc_size) as *const MemoryDescriptor };
     }
+    // for i in 0..512 {
+    //     unsafe {
+    //         P1.0[i] = 0x1000 * (i as u64) | 0b11;
+    //     }
+    // }
 
-    serial_println!("Done!\n");
     loop {}
 }

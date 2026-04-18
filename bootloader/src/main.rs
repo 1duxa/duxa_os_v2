@@ -133,14 +133,15 @@ fn main() -> Status {
     drop(dir);
     let memory_map = unsafe { boot::exit_boot_services(Some(MemoryType::LOADER_DATA)) };
 
+    let stack_top = stack_ptr.as_ptr() as u64 + (stack_pages as u64) * 4096;
     let boot_info = BootInfo {
         mmap_ptr: memory_map.get(0).unwrap() as *const _ as u64,
         mmap_len: memory_map.len(),
         mmap_desc_size: memory_map.meta().desc_size,
+        stack_top
     };
 
     let entry_point = ehdr.entry;
-    let stack_top = stack_ptr.as_ptr() as u64 + (stack_pages as u64) * 4096;
 
     info!(
         "Jumping to kernel at {:#x} with stack at {:#x}",
@@ -153,7 +154,7 @@ fn main() -> Status {
             "xor rbp, rbp",
             "mov rdi, {boot_info}",
             "jmp {entry}",
-            stack = in(reg) stack_top,
+            stack = in(reg) boot_info.stack_top,
             boot_info = in(reg) &boot_info as *const BootInfo,
             entry = in(reg) entry_point,
             options(noreturn)

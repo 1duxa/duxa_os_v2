@@ -7,4 +7,6 @@ edition = "2024"
 log = "0.4.29"
 uefi = { version = "0.37.0", features = ["panic_handler", "logger"] }
 uefi-bootinfo = { path = "../libs/uefi-bootinfo" }
+page-table = { path = "../libs/page-table/"}
+constants = { path = "../libs/constants/"}
 

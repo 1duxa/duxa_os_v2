@@ -9,3 +9,5 @@ uefi = { version = "0.37.0", features = ["panic_handler", "logger"] }
 com = { path = "../libs/com" }
 uefi-bootinfo = { path = "../libs/uefi-bootinfo" }
 page-table = { path = "../libs/page-table/"}
+constants = { path = "../libs/constants/"}
+

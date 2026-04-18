@@ -5,17 +5,20 @@ KERNEL_DIR="$ROOT_DIR/kernel"
 BOOT_EFI=$ROOT_DIR/target/x86_64-unknown-uefi/debug/bootloader.efi
 KERNEL_EFI=$ROOT_DIR/target/x86_64-unknown-none/debug/kernel
 
+if [ ! -f OVMF_CODE.fd ]; then
 cp /usr/share/OVMF/OVMF_CODE.fd $ROOT_DIR
+fi
+
+if [ ! -f OVMF_VARS.fd ]; then
 cp /usr/share/OVMF/OVMF_VARS.fd $ROOT_DIR
+fi 
 
 rm esp.img
 
-if [ ! -f esp.img ]; then
-  dd if=/dev/zero of=esp.img bs=1M count=64
-  mkfs.vfat esp.img
-  mmd -i esp.img ::/EFI
-  mmd -i esp.img ::/EFI/BOOT
-fi
+dd if=/dev/zero of=esp.img bs=1M count=64
+mkfs.vfat esp.img
+mmd -i esp.img ::/EFI
+mmd -i esp.img ::/EFI/BOOT
 
 mcopy -o -i esp.img "$BOOT_EFI"   ::/EFI/BOOT/BOOTX64.EFI
 mcopy -o -i esp.img "$KERNEL_EFI" ::/EFI/BOOT/KERNEL.EFI

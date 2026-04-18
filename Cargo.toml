@@ -4,6 +4,8 @@ members = [
     "bootloader",
     "libs/com",
     "libs/uefi-bootinfo",
+    "libs/page-table",
+    "libs/constants"
 ]
 resolver = "2"
 

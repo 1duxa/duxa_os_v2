@@ -1,7 +1,10 @@
 #![no_main]
 #![no_std]
 
+use core::arch::asm;
+
 use log::info;
+use page_table::PageTable;
 use uefi::{
     Identify,
     boot::{MemoryType, SearchType},
@@ -161,6 +164,40 @@ fn main() -> Status {
         );
     }
 }
+static mut P1: PageTable = PageTable([0; 512]);
+static mut P2: PageTable = PageTable([0; 512]);
+static mut P3: PageTable = PageTable([0; 512]);
+static mut P4: PageTable = PageTable([0; 512]);
+
+fn load_cr3(p4: *const PageTable) {
+    let phys = p4 as u64;
+    unsafe {
+        asm!(
+            "mov cr3, {}",
+            in(reg) phys,
+            options(nostack, preserves_flags)
+        );
+    }
+}
+
+fn enable_pae() {
+    let mut cr4: u64;
+    unsafe {
+        asm!("mov {}, cr4", out(reg) cr4);
+        cr4 |= 1 << 5;
+        asm!("mov cr4, {}", in(reg) cr4);
+    }
+}
+
+fn enable_paging() {
+    let mut cr0: u64;
+    unsafe {
+        asm!("mov {}, cr0", out(reg) cr0);
+        cr0 |= 1 << 31;
+        asm!("mov cr0, {}", in(reg) cr0);
+    }
+}
+
 
 const PT_LOAD: u32 = 1;
 

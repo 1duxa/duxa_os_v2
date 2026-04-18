@@ -52,11 +52,11 @@ pub fn serial() -> SerialPort {
     SerialPort
 }
 pub fn print_hex(n: u64) {
-    serial_println!("0x{:x}", n);
+    serial_print!("0x{:x}", n);
 }
 
 pub fn print_num(n: usize) {
-    serial_println!("{}", n);
+    serial_print!("{}", n);
 }
 
 #[macro_export]

@@ -4,10 +4,7 @@
 use core::arch::asm;
 
 use com::{SerialPort, print_hex, print_num, serial_print, serial_println};
-use constants::{
-    page_flags::{HUGE, PRESENT, WRITABLE},
-    size::{KiB, MiB},
-};
+use constants::size::KiB;
 use page_table::PageTable;
 use uefi::boot::{MemoryDescriptor, MemoryType};
 use uefi_bootinfo::BootInfo;
@@ -32,62 +29,38 @@ fn load_cr3(p4: *const PageTable) {
         );
     }
 }
-
-fn enable_pae() {
-    let mut cr4: u64;
-    unsafe {
-        asm!("mov {}, cr4", out(reg) cr4);
-        cr4 |= 1 << 5;
-        asm!("mov cr4, {}", in(reg) cr4);
+fn print_hex_raw(n: u64) {
+    serial_print!("0x");
+    for i in (0..16).rev() {
+        let nibble = ((n >> (i * 4)) & 0xF) as u8;
+        let c = if nibble < 10 {
+            b'0' + nibble
+        } else {
+            b'a' + nibble - 10
+        };
+        SerialPort::write_byte(c);
     }
+    SerialPort::write_byte(b'\n');
 }
-
-fn enable_paging() {
-    let mut cr0: u64;
-    unsafe {
-        asm!("mov {}, cr0", out(reg) cr0);
-        cr0 |= 1 << 31;
-        asm!("mov cr0, {}", in(reg) cr0);
-    }
-}
-
 #[unsafe(no_mangle)]
 pub extern "C" fn kernel_main(boot_info: *const BootInfo) -> ! {
     SerialPort::init();
     serial_print!("Kernel started!\n");
 
     let info = unsafe { &*boot_info };
-    let kernel_start = unsafe { &_kernel_start as *const _ as u64 };
-    let kernel_end = unsafe { &_kernel_end as *const _ as u64 };
-
-    unsafe {
-        for i in 0..512 {
-            P2.0[i] = (i as u64 * 2 * MiB) | PRESENT | WRITABLE | HUGE;
-        }
-    }
-
-    unsafe {
-        P3.0[0] = &raw const P2 as u64 | PRESENT | WRITABLE;
-    }
-
-    unsafe {
-        P4.0[0] = &raw const P3 as u64 | PRESENT | WRITABLE;
-    }
-
-    enable_pae();
-    load_cr3(&raw const P4);
-    enable_paging();
+    let kernel_real_start = unsafe { &_kernel_start as *const _ as u64 };
+    let kernel_real_end = unsafe { &_kernel_end as *const _ as u64 };
 
     serial_println!("Kernel starts at: ");
-    print_hex(kernel_start);
+    print_hex(kernel_real_start);
 
-    serial_println!("Kernel ends at: ");
-    print_hex(kernel_end);
+    serial_println!("\nKernel ends at: ");
+    print_hex(kernel_real_end);
 
-    serial_println!("Kernel stack top at: ");
+    serial_println!("\nKernel stack top at: ");
     print_hex(info.stack_top);
 
-    serial_println!("Memory map entries: ");
+    serial_println!("\nMemory map entries: ");
     print_num(info.mmap_len);
     serial_print!("\n");
 

@@ -3,6 +3,7 @@
 
 use core::arch::asm;
 
+use constants::{page_flags::{HUGE, PRESENT, WRITABLE}, size::MiB};
 use log::info;
 use page_table::PageTable;
 use uefi::{
@@ -73,8 +74,8 @@ fn main() -> Status {
     let phentsize = ehdr.phentsize as usize;
     let phnum = ehdr.phnum as usize;
 
-    let mut min_vaddr = usize::MAX;
-    let mut max_vaddr = 0usize;
+    let mut min_addr = usize::MAX;
+    let mut max_addr = 0usize;
 
     for i in 0..phnum {
         let phdr =
@@ -82,18 +83,18 @@ fn main() -> Status {
         if phdr.ptype != PT_LOAD || phdr.memsz == 0 {
             continue;
         }
-        let start = phdr.vaddr as usize;
+        let start = phdr.paddr as usize;
         let end = start + phdr.memsz as usize;
-        if start < min_vaddr {
-            min_vaddr = start;
+        if start < min_addr {
+            min_addr = start;
         }
-        if end > max_vaddr {
-            max_vaddr = end;
+        if end > max_addr {
+            max_addr = end;
         }
     }
 
-    let page_start = min_vaddr & !0xFFF;
-    let pages = (max_vaddr - page_start + 0xFFF) / 0x1000;
+    let page_start = min_addr & !0xFFF;
+    let pages = (max_addr - page_start + 0xFFF) / 0x1000;
     boot::allocate_pages(
         boot::AllocateType::Address(page_start as u64),
         MemoryType::LOADER_DATA,
@@ -110,16 +111,16 @@ fn main() -> Status {
 
         let file_bytes = phdr.filesz as usize;
         let mem_bytes = phdr.memsz as usize;
-        let vaddr = phdr.vaddr as usize;
+        let addr = phdr.paddr as usize;
         let file_offset = phdr.offset as usize;
 
-        let dest = unsafe { core::slice::from_raw_parts_mut(vaddr as *mut u8, mem_bytes) };
+        let dest = unsafe { core::slice::from_raw_parts_mut(addr as *mut u8, mem_bytes) };
         dest[..file_bytes].copy_from_slice(&kernel_buf[file_offset..file_offset + file_bytes]);
         dest[file_bytes..].fill(0);
 
         info!(
             "Loaded segment @ {:#x} filesz={} memsz={}",
-            vaddr, file_bytes, mem_bytes
+            addr, file_bytes, mem_bytes
         );
     }
     info!("All segments loaded successfully");
@@ -141,7 +142,8 @@ fn main() -> Status {
         mmap_ptr: memory_map.get(0).unwrap() as *const _ as u64,
         mmap_len: memory_map.len(),
         mmap_desc_size: memory_map.meta().desc_size,
-        stack_top
+        stack_top,
+        kernel_high_p4_addr: 0
     };
 
     let entry_point = ehdr.entry;
@@ -150,6 +152,27 @@ fn main() -> Status {
         "Jumping to kernel at {:#x} with stack at {:#x}",
         entry_point, stack_top
     );
+    unsafe {
+        for i in 0..512 {
+            P2.0[i] = (i as u64 * 2 * MiB) | PRESENT | WRITABLE | HUGE;
+        }
+    }
+
+    unsafe {
+        P3.0[0]   = &raw const P2 as u64 | PRESENT | WRITABLE;
+        P3_HIGH.0[510] = &raw const P2 as u64 | PRESENT | WRITABLE;
+
+        P4.0[0]   = &raw const P3 as u64 | PRESENT | WRITABLE;
+        P4.0[511] = &raw const P3_HIGH as u64 | PRESENT | WRITABLE;
+    }
+
+    info!("P4      at {:#x}", &raw const P4 as u64);
+info!("P3      at {:#x}", &raw const P3 as u64);
+info!("P3_HIGH at {:#x}", &raw const P3_HIGH as u64);
+info!("P2      at {:#x}", &raw const P2 as u64);
+    load_cr3(&raw const P4);
+
+
 
     unsafe {
         core::arch::asm!(
@@ -164,9 +187,10 @@ fn main() -> Status {
         );
     }
 }
-static mut P1: PageTable = PageTable([0; 512]);
+
 static mut P2: PageTable = PageTable([0; 512]);
 static mut P3: PageTable = PageTable([0; 512]);
+static mut P3_HIGH: PageTable = PageTable([0; 512]);
 static mut P4: PageTable = PageTable([0; 512]);
 
 fn load_cr3(p4: *const PageTable) {
@@ -179,25 +203,6 @@ fn load_cr3(p4: *const PageTable) {
         );
     }
 }
-
-fn enable_pae() {
-    let mut cr4: u64;
-    unsafe {
-        asm!("mov {}, cr4", out(reg) cr4);
-        cr4 |= 1 << 5;
-        asm!("mov cr4, {}", in(reg) cr4);
-    }
-}
-
-fn enable_paging() {
-    let mut cr0: u64;
-    unsafe {
-        asm!("mov {}, cr0", out(reg) cr0);
-        cr0 |= 1 << 31;
-        asm!("mov cr0, {}", in(reg) cr0);
-    }
-}
-
 
 const PT_LOAD: u32 = 1;
 

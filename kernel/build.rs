@@ -6,6 +6,8 @@ fn main() {
     let linker_script = Path::new(&manifest_dir).join("kernel.ld");
 
     println!("cargo:rustc-link-arg=-T{}", linker_script.display());
+    println!("cargo:rustc-link-arg=-no-pie");
+    println!("cargo:rustc-link-arg=-static");
     println!("cargo:rerun-if-changed={}", linker_script.display());
 
     println!(
@@ -13,4 +15,3 @@ fn main() {
         linker_script.display()
     );
 }
-

@@ -2,7 +2,7 @@ ENTRY(kernel_main)
 
 SECTIONS {
     . = 0x100000;
-
+    _kernel_start = .;
     .text   : { *(.text .text.*) }
     .rodata : { *(.rodata .rodata.*) }
     .data   : { *(.data .data.*) }
@@ -11,6 +11,6 @@ SECTIONS {
         *(.bss .bss.* COMMON)
         __bss_end = .;
     }
-
+    _kernel_end = .;
     /DISCARD/ : { *(.eh_frame) *(.note*) }
 }

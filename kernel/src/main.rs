@@ -1,7 +1,7 @@
 #![no_main]
 #![no_std]
 
-use com::{SerialPort, serial_print, serial_println};
+use com::{SerialPort, serial_println};
 use constants::size::KiB;
 use uefi::boot::{MemoryDescriptor, MemoryType};
 use uefi_bootinfo::BootInfo;
@@ -14,59 +14,92 @@ unsafe extern "C" {
 #[unsafe(no_mangle)]
 pub extern "C" fn kernel_main(boot_info: *const BootInfo) -> ! {
     SerialPort::init();
-    serial_print!("Kernel started!\n");
+    serial_println!("Kernel started!");
 
     let info = unsafe { &*boot_info };
-    let kernel_real_start = unsafe { &_kernel_start as *const _ as u64 };
-    let kernel_real_end = unsafe { &_kernel_end as *const _ as u64 };
+    let kern_offset = info.kernel_virt_base - info.kernel_phys_base;
 
-    serial_println!("Kernel starts at: 0x{:x}", kernel_real_start);
-    serial_println!("Kernel ends at: 0x{:x}", kernel_real_end);
-    serial_println!("Kernel stack top at: 0x{:x}", info.stack_top);
-    serial_println!("Memory map entries: {}", info.mmap_len);
+    let kernel_virt_start = unsafe { &_kernel_start as *const _ as u64 };
+    let kernel_virt_end   = unsafe { &_kernel_end   as *const _ as u64 };
+    let kernel_phys_end   = kernel_virt_end - kern_offset;
 
+    serial_println!("Kernel virt: 0x{:x} - 0x{:x}", kernel_virt_start, kernel_virt_end);
+    serial_println!("Kernel phys: 0x{:x} - 0x{:x}", info.kernel_phys_base, kernel_phys_end);
+    serial_println!("Stack top: 0x{:x}", info.stack_top);
+    serial_println!("PHYS_MAP: 0x{:x}", info.phys_map_base);
+
+    // Print and count usable memory regions
     let mut ptr = info.mmap_ptr as *const MemoryDescriptor;
-    let mut usable_len = 0;
+    let mut usable_len = 0usize;
+    serial_println!("Memory map ({} entries):", info.mmap_len);
     for _ in 0..info.mmap_len {
         let desc = unsafe { &*ptr };
-
         if desc.ty == MemoryType::CONVENTIONAL {
-            serial_print!("Usable RAM: 0x{:x}", desc.phys_start);
-            serial_print!(" pages= {}", desc.page_count as usize);
-            serial_print!(" ({}) bytes\n", (desc.page_count * KiB) as usize);
+            serial_println!(
+                "  RAM: 0x{:x}  pages={}  ({} KiB)",
+                desc.phys_start,
+                desc.page_count,
+                desc.page_count * KiB,
+            );
             usable_len += 1;
         }
-
         ptr = unsafe { (ptr as *const u8).add(info.mmap_desc_size) as *const MemoryDescriptor };
     }
+
+    // Move stack into higher half before removing identity map
     unsafe {
-        let kernel_phys_end = kernel_real_end - 0xFFFFFFFF80000000 + 0x100000;
-
-        let after_kernel =
-            core::slice::from_raw_parts_mut(kernel_phys_end as *mut MemoryDescriptor, usable_len);
-        let mut ptr = info.mmap_ptr as *const MemoryDescriptor;
-        let mut count = 0;
-        for _ in 0..info.mmap_len {
-            let desc = &*ptr;
-
-            if desc.ty == MemoryType::CONVENTIONAL {
-                after_kernel[count] = *desc;
-                count += 1;
-            }
-
-            ptr = (ptr as *const u8).add(info.mmap_desc_size) as *const MemoryDescriptor;
-        }
+        core::arch::asm!(
+            "add rsp, {offset}",
+            offset = in(reg) kern_offset,
+        );
     }
 
-    unsafe {
-        let p4 = info.kernel_p4_addr as *mut u64;
-        *p4 = 0;
+    // Copy usable memory descriptors to just after the kernel in physical memory
+    let after_kernel = unsafe {
+        core::slice::from_raw_parts_mut(kernel_phys_end as *mut MemoryDescriptor, usable_len)
+    };
+    let mut ptr = info.mmap_ptr as *const MemoryDescriptor;
+    let mut count = 0usize;
+    for _ in 0..info.mmap_len {
+        let desc = unsafe { &*ptr };
+        if desc.ty == MemoryType::CONVENTIONAL {
+            after_kernel[count] = *desc;
+            count += 1;
+        }
+        ptr = unsafe { (ptr as *const u8).add(info.mmap_desc_size) as *const MemoryDescriptor };
+    }
 
+    // Save everything we need from info before removing identity map
+    let p4_phys = info.kernel_p4_addr;
+    let phys_map = info.phys_map_base;
+
+    // Remove identity map (P4[0]) and flush TLB
+    unsafe {
+        let p4 = p4_phys as *mut u64;
+        *p4 = 0;
         core::arch::asm!(
             "mov rax, cr3",
             "mov cr3, rax",
             out("rax") _,
         );
     }
+
+    // Verify page table state via PHYS_MAP window
+    let p4_virt = (phys_map + p4_phys) as *const u64;
+    unsafe {
+        let e0 = *p4_virt;
+        let e256 = *p4_virt.add(256);
+        let e511 = *p4_virt.add(511);
+
+        assert!(e0 & 1 == 0, "P4[0] still present - identity map not removed");
+        assert!(e256 & 1 != 0, "P4[256] not present - PHYS_MAP not mapped");
+        assert!(e511 & 1 != 0, "P4[511] not present - kernel not mapped");
+
+        serial_println!("P4[0]: 0x{:x} (identity, removed)", e0);
+        serial_println!("P4[256]: 0x{:x} (PHYS_MAP)", e256 & !0xFFF);
+        serial_println!("P4[511]: 0x{:x} (kernel)", e511 & !0xFFF);
+    }
+
+    serial_println!("Early boot complete.");
     loop {}
 }

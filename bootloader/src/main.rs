@@ -102,6 +102,14 @@ fn main() -> Status {
     )
     .expect("Failed to allocate kernel memory");
 
+    let stack_pages = 16u64;
+    let stack_ptr = boot::allocate_pages(
+        boot::AllocateType::AnyPages,
+        MemoryType::LOADER_DATA,
+        stack_pages as usize,
+    )
+    .expect("Failed to allocate stack");
+
     for i in 0..phnum {
         let phdr = unsafe { 
             &*(kernel_buf.as_ptr().add(phoff + i * phentsize) as *const Elf64Phdr) 
@@ -127,14 +135,6 @@ fn main() -> Status {
     }
     info!("All segments loaded successfully");
 
-    let stack_pages = 16u64;
-    let stack_ptr = boot::allocate_pages(
-        boot::AllocateType::AnyPages,
-        MemoryType::LOADER_DATA,
-        stack_pages as usize,
-    )
-    .expect("Failed to allocate stack");
-
     info!("Exiting boot services...");
     drop(dir);
     let memory_map = unsafe { boot::exit_boot_services(Some(MemoryType::LOADER_DATA)) };
@@ -145,7 +145,12 @@ fn main() -> Status {
         mmap_len: memory_map.len(),
         mmap_desc_size: memory_map.meta().desc_size,
         stack_top,
-        kernel_p4_addr: 0
+        kernel_p4_addr: 0,
+
+        kernel_phys_base: min_addr as u64,
+        kernel_virt_base: entry_point & !0xFFFFF,
+        kernel_phys_end: max_addr as u64,
+        phys_map_base: 0xFFFF800000000000,
     };
 
     let entry_point = ehdr.entry;
@@ -161,6 +166,7 @@ fn main() -> Status {
         P3_HIGH.0[510] = &raw const P2 as u64 | PRESENT | WRITABLE;
 
         P4.0[0]   = &raw const P3 as u64 | PRESENT | WRITABLE;
+        P4.0[256] = &raw const P3 as u64 | PRESENT | WRITABLE;
         P4.0[511] = &raw const P3_HIGH as u64 | PRESENT | WRITABLE;
     }
     boot_info.kernel_p4_addr = &raw const P4 as u64;

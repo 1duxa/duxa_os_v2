@@ -1,4 +1,7 @@
 #![no_std]
+
+mod uefi;
+
 #[allow(non_upper_case_globals)]
 pub mod size {
     pub const KiB: u64 = 1024;

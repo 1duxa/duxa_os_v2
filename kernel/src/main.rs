@@ -2,6 +2,7 @@
 #![no_std]
 
 use com::{SerialPort, serial_println};
+use mem_info::MemInfo;
 use page_table::{entry_addr, phys_to_virt};
 use uefi_bootinfo::{BootInfo, MemoryDescriptor};
 
@@ -56,20 +57,16 @@ pub extern "C" fn kernel_main(boot_info: *const BootInfo) -> ! {
         );
     }
 
-    // Copy usable memory descriptors to just after the kernel in physical memory
-    let after_kernel = unsafe {
-        core::slice::from_raw_parts_mut(kernel_phys_end as *mut MemoryDescriptor, usable_len)
-    };
-    let mut ptr = info.mmap_ptr as *const MemoryDescriptor;
-    let mut count = 0usize;
-    for _ in 0..info.mmap_len {
-        let desc = unsafe { &*ptr };
-        if desc.mem_type.is_conventional_memory() {
-            after_kernel[count] = *desc;
-            count += 1;
-        }
-        ptr = unsafe { (ptr as *const u8).add(info.mmap_desc_size) as *const MemoryDescriptor };
+    unsafe {
+        MEM_INFO = Some(MemInfo::init(
+            info.mmap_ptr,
+            info.mmap_len,
+            info.mmap_desc_size,
+            kernel_phys_end,
+            usable_len,
+        ));
     }
+
     // Save everything we need from info before removing identity map
     let p4_phys = info.kernel_p4_addr;
     let phys_map = info.phys_map_base;
@@ -107,6 +104,7 @@ pub extern "C" fn kernel_main(boot_info: *const BootInfo) -> ! {
     serial_println!("Early boot complete.");
     loop {}
 }
+static mut MEM_INFO: Option<MemInfo> = None;
 
 #[panic_handler]
 fn panic(info: &core::panic::PanicInfo) -> ! {

@@ -8,4 +8,6 @@ com = { path = "../libs/com" }
 uefi-bootinfo = { path = "../libs/uefi-bootinfo" }
 page-table = { path = "../libs/page-table/"}
 constants = { path = "../libs/constants/"}
+physical-allocator = { path = "../libs/physical-allocator/"}
+mem-info = { path = "../libs/mem-info/"}
 

@@ -5,6 +5,7 @@ members = [
     "libs/com",
     "libs/uefi-bootinfo",
     "libs/page-table",
+    "libs/physical-allocator",
     "libs/constants"
 ]
 resolver = "2"

@@ -1,0 +1,10 @@
+[package]
+name = "mem-info"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+uefi-bootinfo = { path = "../uefi-bootinfo/"}
+
+[lib]
+crate-type = ["lib"]

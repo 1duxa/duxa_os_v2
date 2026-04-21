@@ -5,6 +5,6 @@ edition = "2024"
 
 [dependencies]
 uefi-bootinfo = { path = "../uefi-bootinfo/"}
-
+page-table = { path = "../page-table/"}
 [lib]
 crate-type = ["lib"]

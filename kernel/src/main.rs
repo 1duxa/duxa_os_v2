@@ -2,8 +2,9 @@
 #![no_std]
 
 use com::{SerialPort, serial_println};
-use mem_info::MemInfo;
+use mem_info::{MEM_INFO, MemInfo, MemoryRegion};
 use page_table::{entry_addr, phys_to_virt};
+use physical_allocator::{FrameAllocator, PHYS_ALLOC};
 use uefi_bootinfo::{BootInfo, MemoryDescriptor};
 
 unsafe extern "C" {
@@ -57,6 +58,7 @@ pub extern "C" fn kernel_main(boot_info: *const BootInfo) -> ! {
         );
     }
 
+    let phys_map = info.phys_map_base;
     unsafe {
         MEM_INFO = Some(MemInfo::init(
             info.mmap_ptr,
@@ -64,12 +66,12 @@ pub extern "C" fn kernel_main(boot_info: *const BootInfo) -> ! {
             info.mmap_desc_size,
             kernel_phys_end,
             usable_len,
+            phys_map,
         ));
     }
 
     // Save everything we need from info before removing identity map
     let p4_phys = info.kernel_p4_addr;
-    let phys_map = info.phys_map_base;
 
     // Remove identity map (P4[0]) and flush TLB
     unsafe {
@@ -102,9 +104,21 @@ pub extern "C" fn kernel_main(boot_info: *const BootInfo) -> ! {
     }
 
     serial_println!("Early boot complete.");
+
+    unsafe {
+        PHYS_ALLOC = Some(FrameAllocator::new(&raw const MEM_INFO));
+    }
+    unsafe {
+        if let Some(allocator) = (&raw mut PHYS_ALLOC).as_mut().unwrap()
+            && let Some(addr) = allocator.allocate()
+            && let Some(addr2) = allocator.allocate()
+        {
+            serial_println!("0x{:x}", addr);
+            serial_println!("0x{:x}", addr2);
+        }
+    }
     loop {}
 }
-static mut MEM_INFO: Option<MemInfo> = None;
 
 #[panic_handler]
 fn panic(info: &core::panic::PanicInfo) -> ! {

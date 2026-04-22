@@ -1,5 +1,6 @@
 #![no_std]
 
+use constants::uefi::UefiMemAttrs;
 use page_table::phys_to_virt;
 use uefi_bootinfo::MemoryDescriptor;
 
@@ -40,7 +41,7 @@ impl MemInfo {
 
 pub struct MemoryRegion {
     pub addr: u64,
-    pub attr: u64,
+    pub attr: UefiMemAttrs,
     pub size: u64,
 }
 impl MemoryRegion {

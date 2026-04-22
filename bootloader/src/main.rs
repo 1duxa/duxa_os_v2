@@ -3,7 +3,7 @@
 
 use core::arch::asm;
 
-use constants::{page_flags::{HUGE, PRESENT, WRITABLE}, size::MiB};
+use constants::{PageFlags, size::MiB};
 use log::info;
 use page_table::PageTable;
 use uefi::{
@@ -155,18 +155,22 @@ fn main() -> Status {
     let entry_point = ehdr.entry;
 
     unsafe {
+        let flags = (PageFlags::PRESENT | PageFlags::WRITABLE | PageFlags::HUGE).bits();
+
         for i in 0..512 {
-            P2.0[i] = (i as u64 * 2 * MiB) | PRESENT | WRITABLE | HUGE;
+            P2.0[i] = (i as u64 * 2 * MiB) | flags;
         }
     }
 
     unsafe {
-        P3.0[0]   = &raw const P2 as u64 | PRESENT | WRITABLE;
-        P3_HIGH.0[510] = &raw const P2 as u64 | PRESENT | WRITABLE;
+        let flags = (PageFlags::PRESENT | PageFlags::WRITABLE).bits();
 
-        P4.0[0]   = &raw const P3 as u64 | PRESENT | WRITABLE;
-        P4.0[256] = &raw const P3 as u64 | PRESENT | WRITABLE;
-        P4.0[511] = &raw const P3_HIGH as u64 | PRESENT | WRITABLE;
+        P3.0[0]   = &raw const P2 as u64 | flags;
+        P3_HIGH.0[510] = &raw const P2 as u64 | flags;
+
+        P4.0[0]   = &raw const P3 as u64 | flags;
+        P4.0[256] = &raw const P3 as u64 | flags;
+        P4.0[511] = &raw const P3_HIGH as u64 | flags;
     }
     boot_info.kernel_p4_addr = &raw const P4 as u64;
     load_cr3(&raw const P4);

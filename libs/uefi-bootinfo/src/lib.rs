@@ -2,6 +2,8 @@
 
 use core::fmt::Display;
 
+use constants::uefi::UefiMemAttrs;
+
 pub mod mem_type;
 
 #[repr(C)]
@@ -29,7 +31,7 @@ pub struct MemoryDescriptor {
     /// Number of 4 KiB pages contained in this range.
     pub page_count: u64,
     /// The capability attributes of this memory range.
-    pub att: u64,
+    pub att: UefiMemAttrs,
 }
 impl Display for MemoryDescriptor {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {

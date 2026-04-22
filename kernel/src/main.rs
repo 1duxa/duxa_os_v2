@@ -2,7 +2,7 @@
 #![no_std]
 
 use com::{SerialPort, serial_println};
-use mem_info::{MEM_INFO, MemInfo, MemoryRegion};
+use mem_info::{MEM_INFO, MemInfo};
 use page_table::{entry_addr, phys_to_virt};
 use physical_allocator::{FrameAllocator, PHYS_ALLOC};
 use uefi_bootinfo::{BootInfo, MemoryDescriptor};

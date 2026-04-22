@@ -1,5 +1,7 @@
 #![no_std]
 
+use bitflags::bitflags;
+
 pub mod uefi;
 
 #[allow(non_upper_case_globals)]
@@ -8,8 +10,12 @@ pub mod size {
     pub const MiB: u64 = 1024 * KiB;
     pub const GiB: u64 = 1024 * MiB;
 }
-pub mod page_flags {
-    pub const PRESENT: u64 = 1;
-    pub const WRITABLE: u64 = 1 << 1;
-    pub const HUGE: u64 = 1 << 7;
+bitflags! {
+
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+    pub struct PageFlags: u64 {
+        const PRESENT = 1;
+        const WRITABLE = 1 << 1;
+        const HUGE = 1 << 7;
+    }
 }

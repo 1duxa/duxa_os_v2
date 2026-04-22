@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+
 com = { path = "../libs/com" }
 uefi-bootinfo = { path = "../libs/uefi-bootinfo" }
 page-table = { path = "../libs/page-table/"}

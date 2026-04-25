@@ -7,6 +7,7 @@ edition = "2024"
 uefi-bootinfo = { path = "../uefi-bootinfo/"}
 page-table = { path = "../page-table/"}
 constants = { path = "../constants/"}
+addr = { path = "../addr/"}
 
 [lib]
 crate-type = ["lib"]

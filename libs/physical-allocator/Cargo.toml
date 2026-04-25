@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 mem-info = { path = "../mem-info"}
 constants = { path = "../constants"}
+addr = { path = "../addr"}
 
 [lib]
 crate-type = ["lib"]

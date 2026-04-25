@@ -1,6 +1,6 @@
 #![no_std]
 
-use constants::PhysAddr;
+use addr::phys::PhysAddr;
 use mem_info::{MemInfo, MemoryRegion};
 
 // tbh i am not understanding it well, probably will dig deeper into this
@@ -17,7 +17,7 @@ impl FrameAllocator {
     */
     pub unsafe fn new(info: *const Option<MemInfo>) -> Self {
         let info = unsafe { (*info).as_ref().unwrap() };
-        let regions = info.ptr as *const MemoryRegion;
+        let regions = info.ptr.0 as *const MemoryRegion;
         let first_addr = unsafe { (*regions).addr };
         Self {
             regions,
@@ -26,7 +26,7 @@ impl FrameAllocator {
             next_addr: first_addr,
         }
     }
-    pub fn allocate(&mut self) -> Option<u64> {
+    pub fn allocate(&mut self) -> Option<PhysAddr> {
         loop {
             if self.current_region >= self.region_count {
                 return None;

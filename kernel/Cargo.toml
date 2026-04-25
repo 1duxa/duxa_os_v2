@@ -11,4 +11,5 @@ page-table = { path = "../libs/page-table/"}
 constants = { path = "../libs/constants/"}
 physical-allocator = { path = "../libs/physical-allocator/"}
 mem-info = { path = "../libs/mem-info/"}
+addr = { path = "../libs/addr/"}
 

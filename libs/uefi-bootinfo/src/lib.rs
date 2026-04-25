@@ -2,7 +2,8 @@
 
 use core::fmt::Display;
 
-use constants::{PhysAddr, VirtAddr, uefi::UefiMemAttrs};
+use addr::{phys::PhysAddr, virt::VirtAddr};
+use constants::uefi::UefiMemAttrs;
 
 pub mod mem_type;
 
@@ -18,6 +19,9 @@ pub struct BootInfo {
     pub kernel_virt_base: VirtAddr,
     pub kernel_phys_end: PhysAddr,
     pub phys_map_base: u64,
+
+    pub region_buf_phys: PhysAddr,
+    pub region_buf_pages: usize,
 }
 
 #[repr(C)]
@@ -39,7 +43,7 @@ impl Display for MemoryDescriptor {
             f,
             "[{:<24}] phys={:#012x}  pages={:<6}  ({} KiB)",
             self.mem_type,
-            self.phys_start,
+            self.phys_start.0,
             self.page_count,
             self.page_count * 4,
         )

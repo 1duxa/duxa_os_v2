@@ -8,5 +8,7 @@ log = "0.4.29"
 uefi = { version = "0.37.0", features = ["panic_handler", "logger"] }
 uefi-bootinfo = { path = "../libs/uefi-bootinfo" }
 page-table = { path = "../libs/page-table/"}
+mem-info = { path = "../libs/mem-info/"}
 constants = { path = "../libs/constants/"}
+addr = { path = "../libs/addr/"}
 

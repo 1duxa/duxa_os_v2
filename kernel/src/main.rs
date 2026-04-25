@@ -1,8 +1,8 @@
 #![no_main]
 #![no_std]
 
+use addr::phys::PhysAddr;
 use com::{SerialPort, serial_println};
-use constants::PhysAddr;
 use mem_info::{MEM_INFO, MemInfo};
 use page_table::{entry_addr, phys_to_virt};
 use physical_allocator::{FrameAllocator, PHYS_ALLOC};
@@ -22,7 +22,7 @@ pub unsafe extern "C" fn kernel_main(boot_info: *const BootInfo) -> ! {
     serial_println!("Kernel started!");
 
     let info = unsafe { &*boot_info };
-    let kern_offset = info.kernel_virt_base - info.kernel_phys_base;
+    let kern_offset = info.kernel_virt_base.0 - info.kernel_phys_base.0;
 
     let kernel_virt_start = unsafe { &_kernel_start as *const _ as u64 };
     let kernel_virt_end = unsafe { &_kernel_end as *const _ as u64 };
@@ -35,14 +35,14 @@ pub unsafe extern "C" fn kernel_main(boot_info: *const BootInfo) -> ! {
     );
     serial_println!(
         "Kernel phys: 0x{:x} - 0x{:x}",
-        info.kernel_phys_base,
+        info.kernel_phys_base.0,
         kernel_phys_end
     );
-    serial_println!("Stack top: 0x{:x}", info.stack_top);
+    serial_println!("Stack top: 0x{:x}", info.stack_top.0);
     serial_println!("PHYS_MAP: 0x{:x}", info.phys_map_base);
 
     // Print and count usable memory regions
-    let mut ptr = info.mmap_ptr as *const MemoryDescriptor;
+    let mut ptr = info.mmap_ptr.0 as *const MemoryDescriptor;
     let mut usable_len = 0usize;
     serial_println!("Memory map ({} entries):", info.mmap_len);
     for _ in 0..info.mmap_len {
@@ -68,7 +68,7 @@ pub unsafe extern "C" fn kernel_main(boot_info: *const BootInfo) -> ! {
             info.mmap_ptr,
             info.mmap_len,
             info.mmap_desc_size,
-            kernel_phys_end,
+            PhysAddr(kernel_phys_end),
             usable_len,
             phys_map,
         ));
@@ -79,8 +79,8 @@ pub unsafe extern "C" fn kernel_main(boot_info: *const BootInfo) -> ! {
 
     // Remove identity map (P4[0]) and flush TLB
     unsafe {
-        let p4 = p4_phys as *mut PhysAddr;
-        *p4 = 0;
+        let p4 = p4_phys.0 as *mut PhysAddr;
+        (*p4).0 = 0;
         core::arch::asm!(
             "mov rax, cr3",
             "mov cr3, rax",
@@ -89,7 +89,7 @@ pub unsafe extern "C" fn kernel_main(boot_info: *const BootInfo) -> ! {
     }
 
     // Verify page table state via PHYS_MAP window
-    let p4_virt = phys_to_virt(phys_map, p4_phys) as *const u64;
+    let p4_virt = phys_to_virt(p4_phys, phys_map).0 as *const u64;
     unsafe {
         let e0 = *p4_virt;
         let e256 = *p4_virt.add(256);
@@ -117,8 +117,8 @@ pub unsafe extern "C" fn kernel_main(boot_info: *const BootInfo) -> ! {
             && let Some(addr) = allocator.allocate()
             && let Some(addr2) = allocator.allocate()
         {
-            serial_println!("0x{:x}", addr);
-            serial_println!("0x{:x}", addr2);
+            serial_println!("0x{:x}", addr.0);
+            serial_println!("0x{:x}", addr2.0);
         }
     }
     loop {

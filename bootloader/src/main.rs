@@ -3,6 +3,7 @@
 
 use core::arch::asm;
 
+use addr::{phys::PhysAddr, virt::VirtAddr};
 use constants::{PageFlags, size::MiB};
 use log::info;
 use page_table::PageTable;
@@ -135,19 +136,35 @@ fn main() -> Status {
 
     info!("Exiting boot services...");
     drop(dir);
+
+    // page for a kernel to allocate it's values to
+    let map = boot::memory_map(MemoryType::LOADER_DATA).unwrap();
+    let max_regions = map.len();
+
+    let alloc_size = max_regions * core::mem::size_of::<mem_info::MemoryRegion>();
+    let pages = alloc_size.div_ceil(0x1000);
+    let region_buf =
+        boot::allocate_pages(boot::AllocateType::AnyPages, MemoryType::LOADER_DATA, pages).unwrap();
+
+    drop(map);
+
     let memory_map = unsafe { boot::exit_boot_services(Some(MemoryType::LOADER_DATA)) };
     let stack_top = stack_ptr.as_ptr() as u64 + (stack_pages) * 4096;
     let mut boot_info = BootInfo {
-        mmap_ptr: memory_map.get(0).unwrap() as *const _ as u64,
+        mmap_ptr: PhysAddr(memory_map.get(0).unwrap() as *const _ as u64),
         mmap_len: memory_map.len(),
         mmap_desc_size: memory_map.meta().desc_size,
-        stack_top,
-        kernel_p4_addr: 0,
 
-        kernel_phys_base: min_addr as u64,
-        kernel_virt_base: entry_point & !0xFFFFF,
-        kernel_phys_end: max_addr as u64,
+        stack_top: PhysAddr(stack_top),
+        kernel_p4_addr: PhysAddr(0),
+
+        kernel_phys_base: PhysAddr(min_addr as u64),
+        kernel_virt_base: VirtAddr(entry_point & !0xFFFFF),
+        kernel_phys_end: PhysAddr(max_addr as u64),
         phys_map_base: 0xFFFF800000000000,
+
+        region_buf_phys: PhysAddr(region_buf.as_ptr() as u64),
+        region_buf_pages: pages,
     };
 
     let entry_point = ehdr.entry;
@@ -170,7 +187,7 @@ fn main() -> Status {
         P4.0[256] = &raw const P3 as u64 | flags;
         P4.0[511] = &raw const P3_HIGH as u64 | flags;
     }
-    boot_info.kernel_p4_addr = &raw const P4 as u64;
+    boot_info.kernel_p4_addr = PhysAddr(&raw const P4 as u64);
     load_cr3(&raw const P4);
 
     unsafe {
@@ -179,7 +196,7 @@ fn main() -> Status {
             "xor rbp, rbp",
             "mov rdi, {boot_info}",
             "jmp {entry}",
-            stack = in(reg) boot_info.stack_top,
+            stack = in(reg) boot_info.stack_top.0,
             boot_info = in(reg) &boot_info as *const BootInfo,
             entry = in(reg) entry_point,
             options(noreturn)

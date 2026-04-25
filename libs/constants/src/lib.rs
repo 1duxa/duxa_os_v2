@@ -1,10 +1,6 @@
 #![no_std]
 
 use bitflags::bitflags;
-
-pub type PhysAddr = u64;
-pub type VirtAddr = u64;
-
 pub const COM1: u16 = 0x3F8;
 
 #[allow(non_upper_case_globals)]

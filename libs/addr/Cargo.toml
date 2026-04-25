@@ -1,11 +1,10 @@
 [package]
-name = "uefi-bootinfo"
+name = "addr"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
 constants = { path = "../constants/"}
-addr = { path = "../addr/"}
 
 [lib]
 crate-type = ["lib"]

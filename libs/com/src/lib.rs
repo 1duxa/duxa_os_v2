@@ -11,7 +11,7 @@ impl SerialPort {
         let com = COM1;
         outb(com + 1, 0x00); // Disable interrupts
         outb(com + 3, 0x80); // Enable DLAB
-        outb(com + 0, 0x03); // 38400 baud
+        outb(com, 0x03); // 38400 baud
         outb(com + 1, 0x00);
         outb(com + 3, 0x03); // 8 bits, no parity
         outb(com + 2, 0xC7); // FIFO

@@ -11,7 +11,6 @@ pub mod size {
     pub const GiB: u64 = 1024 * MiB;
 }
 bitflags! {
-
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
     pub struct PageFlags: u64 {
         const PRESENT = 1;

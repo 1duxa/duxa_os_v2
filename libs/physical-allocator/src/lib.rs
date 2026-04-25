@@ -9,7 +9,11 @@ pub struct FrameAllocator {
     next_addr: u64,        // next physical addr to hand out within current region
 }
 impl FrameAllocator {
-    pub fn new(info: *const Option<MemInfo>) -> Self {
+    /**
+        # Safety
+        It's inherently unsafe
+    */
+    pub unsafe fn new(info: *const Option<MemInfo>) -> Self {
         let info = unsafe { (*info).as_ref().unwrap() };
         let regions = info.ptr as *const MemoryRegion;
         let first_addr = unsafe { (*regions).addr };

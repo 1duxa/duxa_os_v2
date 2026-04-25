@@ -19,7 +19,6 @@ use uefi::{
 };
 use uefi_bootinfo::BootInfo;
 
-
 #[entry]
 fn main() -> Status {
     uefi::helpers::init().unwrap();
@@ -94,7 +93,7 @@ fn main() -> Status {
     }
 
     let page_start = min_addr & !0xFFF;
-    let pages = (max_addr - page_start + 0xFFF) / 0x1000;
+    let pages = (max_addr - page_start).div_ceil(0x1000);
     boot::allocate_pages(
         boot::AllocateType::Address(page_start as u64),
         MemoryType::LOADER_DATA,
@@ -111,9 +110,8 @@ fn main() -> Status {
     .expect("Failed to allocate stack");
 
     for i in 0..phnum {
-        let phdr = unsafe { 
-            &*(kernel_buf.as_ptr().add(phoff + i * phentsize) as *const Elf64Phdr) 
-        };
+        let phdr =
+            unsafe { &*(kernel_buf.as_ptr().add(phoff + i * phentsize) as *const Elf64Phdr) };
 
         if phdr.ptype != PT_LOAD || phdr.memsz == 0 {
             continue;
@@ -138,7 +136,7 @@ fn main() -> Status {
     info!("Exiting boot services...");
     drop(dir);
     let memory_map = unsafe { boot::exit_boot_services(Some(MemoryType::LOADER_DATA)) };
-    let stack_top = stack_ptr.as_ptr() as u64 + (stack_pages as u64) * 4096;
+    let stack_top = stack_ptr.as_ptr() as u64 + (stack_pages) * 4096;
     let mut boot_info = BootInfo {
         mmap_ptr: memory_map.get(0).unwrap() as *const _ as u64,
         mmap_len: memory_map.len(),
@@ -165,10 +163,10 @@ fn main() -> Status {
     unsafe {
         let flags = (PageFlags::PRESENT | PageFlags::WRITABLE).bits();
 
-        P3.0[0]   = &raw const P2 as u64 | flags;
+        P3.0[0] = &raw const P2 as u64 | flags;
         P3_HIGH.0[510] = &raw const P2 as u64 | flags;
 
-        P4.0[0]   = &raw const P3 as u64 | flags;
+        P4.0[0] = &raw const P3 as u64 | flags;
         P4.0[256] = &raw const P3 as u64 | flags;
         P4.0[511] = &raw const P3_HIGH as u64 | flags;
     }
@@ -246,19 +244,17 @@ pub fn get_fs() -> Directory {
     let handles = boot::locate_handle_buffer(SearchType::ByProtocol(&SimpleFileSystem::GUID))
         .expect("Failed to locate FS handles");
     for handle in handles.iter() {
-        if let Ok(mut fs) = boot::open_protocol_exclusive::<SimpleFileSystem>(*handle) {
-            if let Ok(mut dir) = fs.open_volume() {
-                if dir
-                    .open(
-                        cstr16!("EFI\\BOOT\\KERNEL.EFI"),
-                        uefi::proto::media::file::FileMode::Read,
-                        FileAttribute::empty(),
-                    )
-                    .is_ok()
-                {
-                    return dir;
-                }
-            }
+        if let Ok(mut fs) = boot::open_protocol_exclusive::<SimpleFileSystem>(*handle)
+            && let Ok(mut dir) = fs.open_volume()
+            && dir
+                .open(
+                    cstr16!("EFI\\BOOT\\KERNEL.EFI"),
+                    uefi::proto::media::file::FileMode::Read,
+                    FileAttribute::empty(),
+                )
+                .is_ok()
+        {
+            return dir;
         }
     }
     panic!("No suitable filesystem found");

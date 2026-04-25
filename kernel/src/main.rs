@@ -11,9 +11,12 @@ unsafe extern "C" {
     static _kernel_start: u8;
     static _kernel_end: u8;
 }
-
 #[unsafe(no_mangle)]
-pub extern "C" fn kernel_main(boot_info: *const BootInfo) -> ! {
+/**
+    # Safety
+    It's inherently unsafe
+*/
+pub unsafe extern "C" fn kernel_main(boot_info: *const BootInfo) -> ! {
     SerialPort::init();
     serial_println!("Kernel started!");
 
@@ -117,7 +120,11 @@ pub extern "C" fn kernel_main(boot_info: *const BootInfo) -> ! {
             serial_println!("0x{:x}", addr2);
         }
     }
-    loop {}
+    loop {
+        unsafe {
+            core::arch::asm!("hlt");
+        }
+    }
 }
 
 #[panic_handler]

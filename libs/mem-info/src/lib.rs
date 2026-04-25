@@ -1,23 +1,23 @@
 #![no_std]
 
-use constants::uefi::UefiMemAttrs;
+use constants::{PhysAddr, uefi::UefiMemAttrs};
 use page_table::phys_to_virt;
 use uefi_bootinfo::MemoryDescriptor;
 
 pub static mut MEM_INFO: Option<MemInfo> = None;
 
 pub struct MemInfo {
-    pub ptr: u64,
+    pub ptr: PhysAddr,
     pub len: usize,
 }
 impl MemInfo {
     pub fn init(
-        mmap_ptr: u64,
+        mmap_ptr: PhysAddr,
         mmap_len: usize,
         mmap_desc_size: usize,
-        phys_write_to: u64,
+        phys_write_to: PhysAddr,
         usable: usize,
-        phys_map: u64,
+        phys_map: PhysAddr,
     ) -> Self {
         let mem_regions =
             unsafe { core::slice::from_raw_parts_mut(phys_write_to as *mut MemoryRegion, usable) };
@@ -40,7 +40,7 @@ impl MemInfo {
 }
 
 pub struct MemoryRegion {
-    pub addr: u64,
+    pub addr: PhysAddr,
     pub attr: UefiMemAttrs,
     pub size: u64,
 }

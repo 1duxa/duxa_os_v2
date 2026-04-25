@@ -7,6 +7,7 @@ members = [
     "libs/page-table",
     "libs/physical-allocator",
     "libs/virtual-allocator",
+    "libs/idt",
     "libs/constants"
 ]
 resolver = "2"

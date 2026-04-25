@@ -2,7 +2,10 @@
 
 use bitflags::bitflags;
 
-pub mod uefi;
+pub type PhysAddr = u64;
+pub type VirtAddr = u64;
+
+pub const COM1: u16 = 0x3F8;
 
 #[allow(non_upper_case_globals)]
 pub mod size {
@@ -10,6 +13,9 @@ pub mod size {
     pub const MiB: u64 = 1024 * KiB;
     pub const GiB: u64 = 1024 * MiB;
 }
+
+pub mod uefi;
+
 bitflags! {
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
     pub struct PageFlags: u64 {

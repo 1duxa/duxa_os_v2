@@ -1,12 +1,14 @@
 #![no_std]
 
+use constants::PhysAddr;
 use mem_info::{MemInfo, MemoryRegion};
+
 // tbh i am not understanding it well, probably will dig deeper into this
 pub struct FrameAllocator {
     regions: *const MemoryRegion,
     region_count: usize,
     current_region: usize, // index into regions slice
-    next_addr: u64,        // next physical addr to hand out within current region
+    next_addr: PhysAddr,   // next physical addr to hand out within current region
 }
 impl FrameAllocator {
     /**

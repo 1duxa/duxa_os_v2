@@ -1,8 +1,7 @@
 #![no_std]
 
+use constants::COM1;
 use core::fmt;
-
-const COM1: u16 = 0x3F8;
 
 pub struct SerialPort;
 

@@ -2,6 +2,7 @@
 #![no_std]
 
 use com::{SerialPort, serial_println};
+use constants::PhysAddr;
 use mem_info::{MEM_INFO, MemInfo};
 use page_table::{entry_addr, phys_to_virt};
 use physical_allocator::{FrameAllocator, PHYS_ALLOC};
@@ -74,11 +75,11 @@ pub unsafe extern "C" fn kernel_main(boot_info: *const BootInfo) -> ! {
     }
 
     // Save everything we need from info before removing identity map
-    let p4_phys = info.kernel_p4_addr;
+    let p4_phys: PhysAddr = info.kernel_p4_addr;
 
     // Remove identity map (P4[0]) and flush TLB
     unsafe {
-        let p4 = p4_phys as *mut u64;
+        let p4 = p4_phys as *mut PhysAddr;
         *p4 = 0;
         core::arch::asm!(
             "mov rax, cr3",

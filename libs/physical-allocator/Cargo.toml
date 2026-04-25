@@ -4,7 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-mem-info = { path = "../mem-info/"}
+mem-info = { path = "../mem-info"}
+constants = { path = "../constants"}
 
 [lib]
 crate-type = ["lib"]

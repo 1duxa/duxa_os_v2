@@ -1,9 +1,9 @@
-[package] 
-name = "page-table"
+[package]
+name = "idt"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-constants = {path = "../constants/"}
+
 [lib]
 crate-type = ["lib"]

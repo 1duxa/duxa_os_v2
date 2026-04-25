@@ -2,21 +2,21 @@
 
 use core::fmt::Display;
 
-use constants::uefi::UefiMemAttrs;
+use constants::{PhysAddr, VirtAddr, uefi::UefiMemAttrs};
 
 pub mod mem_type;
 
 #[repr(C)]
 pub struct BootInfo {
-    pub mmap_ptr: u64,
+    pub mmap_ptr: PhysAddr,
     pub mmap_len: usize,
     pub mmap_desc_size: usize,
-    pub stack_top: u64,
-    pub kernel_p4_addr: u64,
+    pub stack_top: PhysAddr,
+    pub kernel_p4_addr: PhysAddr,
 
-    pub kernel_phys_base: u64,
-    pub kernel_virt_base: u64,
-    pub kernel_phys_end: u64,
+    pub kernel_phys_base: PhysAddr,
+    pub kernel_virt_base: VirtAddr,
+    pub kernel_phys_end: PhysAddr,
     pub phys_map_base: u64,
 }
 
@@ -25,9 +25,9 @@ pub struct BootInfo {
 pub struct MemoryDescriptor {
     pub mem_type: mem_type::MemoryType,
     _pad: u32,
-    pub phys_start: u64,
+    pub phys_start: PhysAddr,
     /// Starting virtual address.
-    pub virt_start: u64,
+    pub virt_start: VirtAddr,
     /// Number of 4 KiB pages contained in this range.
     pub page_count: u64,
     /// The capability attributes of this memory range.

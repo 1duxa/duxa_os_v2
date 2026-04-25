@@ -17,8 +17,12 @@ impl FrameAllocator {
     */
     pub unsafe fn new(info: *const Option<MemInfo>) -> Self {
         let info = unsafe { (*info).as_ref().unwrap() };
-        let regions = info.ptr.0 as *const MemoryRegion;
-        let first_addr = unsafe { (*regions).addr };
+        let regions = info.ptr.raw() as *const MemoryRegion;
+        let first_addr = if info.len > 0 {
+            unsafe { (*regions).addr }
+        } else {
+            PhysAddr::new(0)
+        };
         Self {
             regions,
             region_count: info.len,
@@ -33,7 +37,7 @@ impl FrameAllocator {
             }
 
             let region = unsafe { &*self.regions.add(self.current_region) };
-            let region_end = region.addr + region.size * 4096;
+            let region_end = region.addr + region.page_count * 4096;
 
             if self.next_addr < region_end {
                 let addr = self.next_addr;

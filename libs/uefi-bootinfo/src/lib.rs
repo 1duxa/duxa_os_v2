@@ -18,7 +18,7 @@ pub struct BootInfo {
     pub kernel_phys_base: PhysAddr,
     pub kernel_virt_base: VirtAddr,
     pub kernel_phys_end: PhysAddr,
-    pub phys_map_base: u64,
+    pub phys_map_base: PhysAddr,
 
     pub region_buf_phys: PhysAddr,
     pub region_buf_pages: usize,
@@ -43,7 +43,7 @@ impl Display for MemoryDescriptor {
             f,
             "[{:<24}] phys={:#012x}  pages={:<6}  ({} KiB)",
             self.mem_type,
-            self.phys_start.0,
+            self.phys_start.raw(),
             self.page_count,
             self.page_count * 4,
         )

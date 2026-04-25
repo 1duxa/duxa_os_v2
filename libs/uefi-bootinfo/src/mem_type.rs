@@ -21,15 +21,12 @@ impl MemoryType {
     pub const PAL_CODE: Self = Self(13);
     pub const PERSISTENT_MEMORY: Self = Self(14);
     pub const UNACCEPTED: Self = Self(15);
+    pub const KERNEL_MEMORY: Self = Self(0x80000000);
 
     pub fn is_conventional_memory(self) -> bool {
         matches!(
             self,
-            Self::CONVENTIONAL
-                | Self::BOOT_SERVICES_CODE
-                | Self::BOOT_SERVICES_DATA
-                | Self::LOADER_CODE
-                | Self::LOADER_DATA
+            Self::CONVENTIONAL | Self::BOOT_SERVICES_CODE | Self::BOOT_SERVICES_DATA
         )
     }
 }
@@ -52,6 +49,7 @@ impl Display for MemoryType {
             Self::PAL_CODE => "PAL_CODE",
             Self::PERSISTENT_MEMORY => "PERSISTENT_MEMORY",
             Self::UNACCEPTED => "UNACCEPTED",
+            Self::KERNEL_MEMORY => "KERNEL_MEMORY",
             Self(v) => return write!(f, "UNKNOWN({:#x})", v),
         };
         f.write_str(name)

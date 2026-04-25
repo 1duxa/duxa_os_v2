@@ -17,14 +17,15 @@ impl MemInfo {
         mmap_len: usize,
         mmap_desc_size: usize,
         phys_write_to: PhysAddr,
-        usable: usize,
-        phys_map: u64,
+        phys_write_to_pages: usize,
+        phys_map: PhysAddr,
     ) -> Self {
+        let max_regions = phys_write_to_pages * 4096 / core::mem::size_of::<MemoryRegion>();
         let mem_regions = unsafe {
-            core::slice::from_raw_parts_mut(phys_write_to.0 as *mut MemoryRegion, usable)
+            core::slice::from_raw_parts_mut(phys_write_to.raw() as *mut MemoryRegion, max_regions)
         };
 
-        let mut ptr = mmap_ptr.0 as *const MemoryDescriptor;
+        let mut ptr = mmap_ptr.raw() as *const MemoryDescriptor;
         let mut count = 0usize;
         for _ in 0..mmap_len {
             let desc = unsafe { &*ptr };
@@ -35,7 +36,7 @@ impl MemInfo {
             ptr = unsafe { (ptr as *const u8).add(mmap_desc_size) as *const MemoryDescriptor };
         }
         Self {
-            ptr: phys_to_virt(PhysAddr(mem_regions.as_ptr() as u64), phys_map),
+            ptr: phys_to_virt(PhysAddr::new(mem_regions.as_ptr() as u64), phys_map),
             len: count,
         }
     }
@@ -44,14 +45,14 @@ impl MemInfo {
 pub struct MemoryRegion {
     pub addr: PhysAddr,
     pub attr: UefiMemAttrs,
-    pub size: u64,
+    pub page_count: u64,
 }
 impl MemoryRegion {
     pub fn new(desc: MemoryDescriptor) -> Self {
         Self {
             addr: desc.phys_start,
             attr: desc.att,
-            size: desc.page_count,
+            page_count: desc.page_count,
         }
     }
 }

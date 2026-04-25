@@ -9,9 +9,8 @@ fn main() {
     println!("cargo:rustc-link-arg=-no-pie");
     println!("cargo:rustc-link-arg=-static");
     println!("cargo:rerun-if-changed={}", linker_script.display());
-
     println!(
-        "cargo:warning=Using linker script: {}",
+        "cargo:warning=using linker script: {}",
         linker_script.display()
     );
 }
